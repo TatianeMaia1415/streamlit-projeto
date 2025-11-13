@@ -1,42 +1,43 @@
-import os
-import os
-import pandas as pd
-import streamlit as st
 import gdown
+import os
+import streamlit as st
+import pandas as pd
 
-# Caminho do arquivo
-file_path = "extrato_bancario_DASHBOARD.csv"
-
-# Link do Google Drive (download direto)
+# Baixar o arquivo do Google Drive antes de carregar
 url = "https://drive.google.com/uc?id=1kUYPvgu-HCIdvdWVDYGCbbfEjEvOetzH"
+output = "extrato_bancario_DASHBOARD.csv"
 
-# Verifica se o arquivo existe
-if not os.path.exists(file_path):
+if not os.path.exists(output):
+    st.info("Baixando base de dados do Google Drive...")
+    gdown.download(url, output, quiet=False)
+    st.success("Base de dados carregada com sucesso!")
+
+# Agora sim, chama a função que usa o arquivo
+@st.cache_data
+def carregar_dados():
+    """Carrega o dataset tratado para análise ou usa dados de demonstração."""
     try:
-        st.info("🔄 Baixando base de dados do Google Drive...")
-        gdown.download(url, file_path, quiet=False)
+        df = pd.read_csv('extrato_bancario_DASHBOARD.csv', encoding='utf-8')
+        df['DT_LANCAMENTO'] = pd.to_datetime(df['DT_LANCAMENTO'], errors='coerce')
     except Exception as e:
-        st.error(f"❌ Erro ao baixar arquivo: {e}")
-        st.stop()
+        st.warning(f"Usando dados de demonstração. O arquivo não foi encontrado. Erro: {e}")
+        data = {
+            'DT_LANCAMENTO': pd.to_datetime([
+                '2020-01-15', '2020-02-20', '2020-03-10',
+                '2020-04-05', '2020-05-25', '2020-06-01'
+            ]),
+            'NM_ESFERA': ['NACIONAL', 'ESTADUAL', 'MUNICIPAL', 'NACIONAL', 'ESTADUAL', 'MUNICIPAL'],
+            'CATEGORIA_GASTO': ['PESSOAL', 'PROPAGANDA', 'OUTROS', 'ALUGUEL', 'PESSOAL', 'PROPAGANDA'],
+            'SG_PARTIDO': ['PT', 'PSDB', 'MDB', 'PT', 'PSDB', 'MDB'],
+            'NM_CONTRAPARTE': ['A', 'B', 'C', 'D', 'E', 'F'],
+            'VR_LANCAMENTO_NUM': [500000.00, 200000.00, 50000.00, 300000.00, 150000.00, 75000.00]
+        }
+        df = pd.DataFrame(data)
 
-# Verifica novamente se o arquivo realmente foi baixado
-if os.path.exists(file_path):
-    st.success("✅ Base de dados carregada com sucesso!")
-    df = pd.read_csv(file_path)
-else:
-    st.error("⚠️ O arquivo não foi baixado. Usando dados de demonstração.")
-    df = pd.DataFrame({
-        "DT_GERACAO": ["2025-10-08"] * 5,
-        "HH_GERACAO": ["10:47:49"] * 5,
-        "AA_REFERENCIA": [2020] * 5,
-        "SG_PARTIDO": ["DEM", "PSDB", "PSB", "PSC", "PSC"],
-        "NM_ESFERA": ["Estadual", "Estadual", "Municipal", "Nacional", "Nacional"],
-        "NR_CNPJ": ["9428368000120", "2405961000129", "23819989000165", "1450856000121", "1450856000121"],
-        "CD_BANCO": [1, 104, 1, 1, 1],
-        "NM_BANCO": ["BCO BRASIL", "CAIXA ECONOMICA FEDERAL", "BCO BRASIL", "BCO BRASIL", "BCO BRASIL"]
-    })
+    return df
 
-st.dataframe(df.head())
+# E aqui, de fato, chama a função:
+df = carregar_dados()
 
 
 # =============================================
@@ -126,31 +127,6 @@ def configurar_estilo_azul_profissional():
 # CARREGAMENTO DE DADOS
 # =============================================
 
-@st.cache_data
-def carregar_dados():
-    """Carrega o dataset tratado para análise ou usa dados de demonstração."""
-    try:
-        # Tenta carregar o arquivo real
-        df = pd.read_csv('extrato_bancario_DASHBOARD.csv', encoding='utf-8')
-        df['DT_LANCAMENTO'] = pd.to_datetime(df['DT_LANCAMENTO'], errors='coerce')
-    except Exception:
-        # Criar um DataFrame de exemplo se o arquivo real não for encontrado
-        data = {
-            'DT_LANCAMENTO': pd.to_datetime(['2020-01-15', '2020-02-20', '2020-03-10', '2020-04-05', '2020-05-25', '2020-06-01']),
-            'NM_ESFERA': ['NACIONAL', 'ESTADUAL', 'MUNICIPAL', 'NACIONAL', 'ESTADUAL', 'MUNICIPAL'],
-            'CATEGORIA_GASTO': ['PESSOAL', 'PROPAGANDA', 'OUTROS', 'ALUGUEL', 'PESSOAL', 'PROPAGANDA'],
-            'SG_PARTIDO': ['PT', 'PSDB', 'MDB', 'PT', 'PSDB', 'MDB'],
-            'NM_CONTRAPARTE': ['A', 'B', 'C', 'D', 'E', 'F'],
-            'VR_LANCAMENTO_NUM': [500000.00, 200000.00, 50000.00, 300000.00, 150000.00, 75000.00]
-        }
-        df = pd.DataFrame(data)
-        st.warning("Usando dados de demonstração. O arquivo 'extrato_bancario_DASHBOARD.csv' não foi encontrado.")
-        
-    if df.empty:
-        st.error("Não foi possível carregar ou gerar dados para análise.")
-        return None
-        
-    return df
 
 # =============================================
 # CONFIGURAÇÃO DO TEMA PLOTLY
