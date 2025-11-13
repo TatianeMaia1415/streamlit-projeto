@@ -4,6 +4,21 @@ import plotly.express as px
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
+import gdown
+
+# URL pública do Google Drive
+url = "https://drive.google.com/uc?id=1kUYPvgu-HCIdvdWVDYGCbbfEjEvOetzH"
+output = "dados.csv"
+
+# Faz o download do arquivo
+gdown.download(url, output, quiet=False)
+
+# Lê o CSV baixado
+df = pd.read_csv(output)
+
+st.write("Prévia dos dados:")
+st.dataframe(df.head())
+
 # =============================================
 # CONFIGURAÇÃO DE ESTILO CORPORATIVO
 # =============================================
