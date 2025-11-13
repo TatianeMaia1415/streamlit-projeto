@@ -2,6 +2,9 @@ import gdown
 import os
 import streamlit as st
 import pandas as pd
+import plotly.graph_objects as go
+import plotly.express as px
+
 
 # Baixar o arquivo do Google Drive antes de carregar
 url = "https://drive.google.com/uc?id=1kUYPvgu-HCIdvdWVDYGCbbfEjEvOetzH"
