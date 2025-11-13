@@ -1,22 +1,43 @@
 import os
+import os
 import pandas as pd
 import streamlit as st
-import gdown  # <--- nova dependência
+import gdown
 
-# Caminho do arquivo local
+# Caminho do arquivo
 file_path = "extrato_bancario_DASHBOARD.csv"
 
-# Link direto do Google Drive
+# Link do Google Drive (download direto)
 url = "https://drive.google.com/uc?id=1kUYPvgu-HCIdvdWVDYGCbbfEjEvOetzH"
 
-# Se o arquivo não existir, baixa automaticamente
+# Verifica se o arquivo existe
 if not os.path.exists(file_path):
-    st.info("🔄 Baixando base de dados do Google Drive...")
-    gdown.download(url, file_path, quiet=False)
+    try:
+        st.info("🔄 Baixando base de dados do Google Drive...")
+        gdown.download(url, file_path, quiet=False)
+    except Exception as e:
+        st.error(f"❌ Erro ao baixar arquivo: {e}")
+        st.stop()
 
-# Agora lê o CSV normalmente
-df = pd.read_csv(file_path)
+# Verifica novamente se o arquivo realmente foi baixado
+if os.path.exists(file_path):
+    st.success("✅ Base de dados carregada com sucesso!")
+    df = pd.read_csv(file_path)
+else:
+    st.error("⚠️ O arquivo não foi baixado. Usando dados de demonstração.")
+    df = pd.DataFrame({
+        "DT_GERACAO": ["2025-10-08"] * 5,
+        "HH_GERACAO": ["10:47:49"] * 5,
+        "AA_REFERENCIA": [2020] * 5,
+        "SG_PARTIDO": ["DEM", "PSDB", "PSB", "PSC", "PSC"],
+        "NM_ESFERA": ["Estadual", "Estadual", "Municipal", "Nacional", "Nacional"],
+        "NR_CNPJ": ["9428368000120", "2405961000129", "23819989000165", "1450856000121", "1450856000121"],
+        "CD_BANCO": [1, 104, 1, 1, 1],
+        "NM_BANCO": ["BCO BRASIL", "CAIXA ECONOMICA FEDERAL", "BCO BRASIL", "BCO BRASIL", "BCO BRASIL"]
+    })
+
 st.dataframe(df.head())
+
 
 # =============================================
 # CONFIGURAÇÃO DE ESTILO CORPORATIVO
