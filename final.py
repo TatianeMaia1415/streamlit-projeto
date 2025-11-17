@@ -4,7 +4,7 @@ import streamlit as st
 import pandas as pd
 import plotly.graph_objects as go
 import plotly.express as px
-
+import plotly.graph_objects as go
 
 # Baixar o arquivo do Google Drive antes de carregar
 url = "https://drive.google.com/uc?id=1kUYPvgu-HCIdvdWVDYGCbbfEjEvOetzH"
@@ -251,7 +251,8 @@ def criar_grafico_treemap_esferas(dados, cores):
             partidos_top_por_esfera.append((esfera, partido))
 
     mask = hierarquia.apply(lambda x: (x['NM_ESFERA'], x['SG_PARTIDO']) in partidos_top_por_esfera, axis=1)
-    dados_filtrados = hierarquia[mask]
+    dados_filtrados = hierarquia[hierarquia['SG_PARTIDO'].isin(dados['SG_PARTIDO'].unique())]
+  
 
     gradiente_laranja = [
         "#FF6F00",  # Esfera
@@ -411,118 +412,90 @@ def criar_grafico_comparacao_percentual(dados, cores):
 @st.cache_data
 def criar_scatter_tarifas_vs_gastos(dados, cores):
     """GRÁFICO 4: Scatter plot - Tarifas bancárias vs Gastos totais por partido (EM MILHÕES)"""
-    
+
     # Agrupa por partido
     dados_agrupados = dados.groupby('SG_PARTIDO').agg({
         'VR_LANCAMENTO_NUM': 'sum'
     }).reset_index()
     dados_agrupados.columns = ['SG_PARTIDO', 'GASTO_TOTAL']
-    
+
     # Calcula tarifas por partido
     tarifas_partido = dados[dados['CATEGORIA_GASTO'] == 'TARIFAS BANCÁRIAS'].groupby('SG_PARTIDO')['VR_LANCAMENTO_NUM'].sum().reset_index()
     tarifas_partido.columns = ['SG_PARTIDO', 'VALOR_TARIFAS']
-    
+
     # Merge
     dados_agrupados = dados_agrupados.merge(tarifas_partido, on='SG_PARTIDO', how='left')
     dados_agrupados['VALOR_TARIFAS'] = dados_agrupados['VALOR_TARIFAS'].fillna(0)
-    
-    # Calcula percentual de tarifas
+
+    # Calcula percentual corretamente
     dados_agrupados['PERC_TARIFAS'] = (dados_agrupados['VALOR_TARIFAS'] / dados_agrupados['GASTO_TOTAL']) * 100
-    
+
     # Filtra partidos com gastos significativos
     dados_agrupados = dados_agrupados[dados_agrupados['GASTO_TOTAL'] > 10000]
-    
-    # CONVERTE PARA MILHÕES DE REAIS
+
+    # Converte para milhões
     dados_agrupados['GASTO_TOTAL_M'] = dados_agrupados['GASTO_TOTAL'] / 1_000_000
     dados_agrupados['VALOR_TARIFAS_M'] = dados_agrupados['VALOR_TARIFAS'] / 1_000_000
-    
-    # Cria o scatter plot
+
+    # Cria scatter plot
     fig = px.scatter(
         dados_agrupados,
         x='GASTO_TOTAL_M',
-        y='VALOR_TARIFAS_M',
+        y='PERC_TARIFAS',
         size='PERC_TARIFAS',
         color='PERC_TARIFAS',
         hover_name='SG_PARTIDO',
         hover_data={
-            'GASTO_TOTAL': ':.2f',  # Mantém original no hover
-            'VALOR_TARIFAS': ':.2f', # Mantém original no hover
+            'GASTO_TOTAL': ':.2f',
+            'VALOR_TARIFAS': ':.2f',
             'PERC_TARIFAS': ':.2f',
-            'GASTO_TOTAL_M': ':.2f',  # Adiciona milhões no hover
-            'VALOR_TARIFAS_M': ':.2f' # Adiciona milhões no hover
         },
         color_continuous_scale=cores['gradiente_secundario'],
         size_max=40
     )
-    
+
     fig = configurar_layout(fig, 'EFICIÊNCIA: TARIFAS BANCÁRIAS vs GASTOS TOTAIS POR PARTIDO')
-    
-    # Adiciona linhas de referência manualmente (1%, 2%, 3% - CORRIGIDO)
-    max_x = dados_agrupados['GASTO_TOTAL_M'].max()
-    
-    # Linha de 1% (excelente eficiência)
-    fig.add_trace(go.Scatter(
-        x=[0, max_x],
-        y=[0, 0.01 * max_x],
-        mode='lines',
-        line=dict(color='green', width=2, dash='dash'),
-        name='1% (Excelente)',
-        showlegend=True
-    ))
-    
-    # Linha de 2% (boa eficiência)
-    fig.add_trace(go.Scatter(
-        x=[0, max_x],
-        y=[0, 0.02 * max_x],
-        mode='lines',
-        line=dict(color='orange', width=2, dash='dash'),
-        name='2% (Boa)',
-        showlegend=True
-    ))
-    
-    # Linha de 3% (alerta - CORRIGIDO de 5% para 3%)
-    fig.add_trace(go.Scatter(
-        x=[0, max_x],
-        y=[0, 0.03 * max_x],
-        mode='lines',
-        line=dict(color='red', width=2, dash='dash'),
-        name='3% (Alerta)',
-        showlegend=True
-    ))
-    
-    fig.update_layout(
-        xaxis=dict(
-            title_text='GASTOS TOTAIS (Milhões de R$)',
-            linecolor=TEMA_PLOTLY['font_color'],
-            gridcolor=TEMA_PLOTLY['font_color'],
-            tickcolor=TEMA_PLOTLY['font_color'],
-            tickfont=dict(color=TEMA_PLOTLY['font_color']),
-            title_font=dict(color=TEMA_PLOTLY['font_color'])
-        ),
-        yaxis=dict(
-            title_text='VALOR EM TARIFAS BANCÁRIAS (Milhões de R$)',
-            linecolor=TEMA_PLOTLY['font_color'],
-            gridcolor=TEMA_PLOTLY['font_color'],
-            tickcolor=TEMA_PLOTLY['font_color'],
-            tickfont=dict(color=TEMA_PLOTLY['font_color']),
-            title_font=dict(color=TEMA_PLOTLY['font_color'])
-        ),
-        coloraxis_colorbar=dict(
-            title="% Tarifas"
+
+    # ----------------------------- FAIXAS DE EFICIÊNCIA (fundo) -----------------------------
+    fig.add_hrect(y0=0, y1=1, fillcolor="green", opacity=0.07, layer="below", line_width=0)
+    fig.add_hrect(y0=1, y1=2, fillcolor="orange", opacity=0.07, layer="below", line_width=0)
+    fig.add_hrect(y0=2, y1=3, fillcolor="red", opacity=0.07, layer="below", line_width=0)
+
+    # ----------------------------- LINHAS DE REFERÊNCIA -----------------------------
+    fig.add_hline(y=1, line=dict(color='green', width=2, dash='dash'), name='1% (Excelente)')
+    fig.add_hline(y=2, line=dict(color='orange', width=2, dash='dash'), name='2% (Boa)')
+    fig.add_hline(y=3, line=dict(color='red', width=2, dash='dash'), name='3% (Alerta)')
+
+    # ----------------------------- AJUSTE DOS EIXOS -----------------------------
+    fig.update_xaxes(
+        title_text='GASTOS TOTAIS (Milhões de R$)',
+        type="log",
+        tickformat=",.1f",
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        tickfont=dict(color="black"),
+        title_font=dict(color="black")
+    )
+
+    fig.update_yaxes(
+        title_text='PERCENTUAL DE TARIFAS BANCÁRIAS (%)',
+        ticksuffix="%",
+        range=[0, dados_agrupados['PERC_TARIFAS'].max() * 1.25],  # Aumenta limite e evita ponto cortado
+        showline=True,
+        linewidth=2,
+        linecolor="black",
+        tickfont=dict(color="black"),
+        title_font=dict(color="black")
+    )
+    fig.update_coloraxes(
+        colorbar=dict(
+            title="% Tarifas",
+            tickfont=dict(color="black")
         )
     )
-    
-    # Melhora a visualização dos eixos
-    fig.update_xaxes(
-        tickformat=",.1f",  # Uma casa decimal para milhões
-        range=[0, dados_agrupados['GASTO_TOTAL_M'].max() * 1.1]
-    )
-    fig.update_yaxes(
-        tickformat=",.1f",  # Uma casa decimal para milhões
-        range=[0, dados_agrupados['VALOR_TARIFAS_M'].max() * 1.1]
-    )
-    
     return fig
+
 
 @st.cache_data
 def criar_ranking_eficiencia(dados, cores):
@@ -674,25 +647,45 @@ def main():
         'paper_bg': CORES['branco']
     })
     
+    # Carrega dados dentro do main (garante que 'dados' exista antes de usar)
     dados = carregar_dados()
-    
     if dados is None:
         return
 
+    
+# REMOVE TODOS OS "NÃO INFORMADO" DO DATAFRAME
+    dados = dados[
+        ~dados['NM_ESFERA'].str.contains("NÃO INFORMADO", case=False, na=False) &
+        ~dados['CATEGORIA_GASTO'].str.contains("NÃO INFORMADO", case=False, na=False) &
+        ~dados['SG_PARTIDO'].str.contains("NÃO INFORMADO", case=False, na=False)
+    ]
+    
+    if dados is None:
+        return
     # Sidebar
     with st.sidebar:
         st.markdown("### CONTROLES DE ANÁLISE")
         
-        esferas = st.multiselect("Selecione as Esferas:",
-                                 sorted(dados['NM_ESFERA'].unique()),
-                                 default=sorted(dados['NM_ESFERA'].unique()))
+        # ---- Filtro Esferas ----
+        lista_esferas = sorted(dados['NM_ESFERA'].unique())
+        opcoes_esferas = ["Todas as esferas"] + lista_esferas
+
+        esferas_sel = st.multiselect("Selecione as Esferas:", opcoes_esferas, default=["Todas as esferas"])
+        esferas = lista_esferas if "Todas as esferas" in esferas_sel else esferas_sel
         
-        categorias = st.multiselect("Selecione as Categorias:",
-                                    sorted(dados['CATEGORIA_GASTO'].unique()),
-                                    default=sorted(dados['CATEGORIA_GASTO'].unique()))
-        
-        valor_max = float(dados['VR_LANCAMENTO_NUM'].max())
-        faixa = st.slider("Faixa de Valores (R$):", 0.0, valor_max, (0.0, valor_max), step=1000.0)
+        # ---- Filtro Categorias ----
+        lista_categorias = sorted(dados['CATEGORIA_GASTO'].unique())
+        opcoes_categorias = ["Todas as categorias"] + lista_categorias
+
+        categorias_sel = st.multiselect("Selecione as Categorias:", opcoes_categorias, default=["Todas as categorias"])
+        categorias = lista_categorias if "Todas as categorias" in categorias_sel else categorias_sel
+
+        # ---- Filtro Partidos ----
+        lista_partidos = sorted(dados['SG_PARTIDO'].unique())
+        opcoes_partidos = ["Todos os partidos"] + lista_partidos
+
+        partidos_sel = st.multiselect("Selecione os Partidos:", opcoes_partidos, default=["Todos os partidos"])
+        partidos = lista_partidos if "Todos os partidos" in partidos_sel else partidos_sel
 
         st.markdown("---")
         st.markdown("### RESUMO GERAL")
@@ -704,15 +697,13 @@ def main():
             st.metric("Transações", f"{len(dados):,}")
             st.metric("Fornecedores", dados['NM_CONTRAPARTE'].nunique())
 
-    # Filtragem de dados
-    dados_filt = dados.copy()
-    if esferas:
+
+        # Filtragem de dados
+        dados_filt = dados.copy()
         dados_filt = dados_filt[dados_filt['NM_ESFERA'].isin(esferas)]
-    if categorias:
         dados_filt = dados_filt[dados_filt['CATEGORIA_GASTO'].isin(categorias)]
-        
-    dados_filt = dados_filt[(dados_filt['VR_LANCAMENTO_NUM'] >= faixa[0]) &
-                            (dados_filt['VR_LANCAMENTO_NUM'] <= faixa[1])]
+        dados_filt = dados_filt[dados_filt['SG_PARTIDO'].isin(partidos)]
+            
 
     # Conteúdo principal
     st.title("ANÁLISE FINANCEIRA DE PARTIDOS POLÍTICOS")
@@ -924,7 +915,8 @@ def main():
         st.markdown("**FILTROS APLICADOS:**")
         st.markdown(f"- Esferas: {len(esferas)}")
         st.markdown(f"- Categorias: {len(categorias)}")
-        st.markdown(f"- Faixa: R$ {faixa[0]:,.0f} - R$ {faixa[1]:,.0f}")
+        st.markdown(f"- Partidos filtrados: {len(partidos)} selecionados")
+
 
     with col2:
         st.markdown("**GRÁFICOS UTILIZADOS:**")
