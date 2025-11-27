@@ -547,7 +547,8 @@ def criar_ranking_eficiencia(dados, cores):
             tickcolor=TEMA_PLOTLY['font_color'],
             tickfont=dict(color=TEMA_PLOTLY['font_color']),
             title_font=dict(color=TEMA_PLOTLY['font_color']),
-            categoryorder='total ascending'
+            categoryorder='array',
+            categoryarray=eficiencia['SG_PARTIDO'].tolist()[::-1]
         ),
         xaxis=dict(
             title_text='PERCENTUAL DE TARIFAS BANCÁRIAS (%)',
@@ -815,12 +816,9 @@ def main():
         # No lugar dos insights atuais, use:
         st.markdown("**Insights:**")
         st.markdown("""    
-        - Partidos abaixo da linha verde (1%) → excelente eficiência financeira.
-        - Entre 1% e 2% (linha laranja) → gestão boa/moderada.
-        - Entre 2% e 3% (linha vermelha) → eficiência regular.
-        - Acima de 3% → alerta, indicando baixa eficiência e necessidade de revisão de custos bancários.
-        - Partidos abaixo das linhas de referência servem como benchmark de controle financeiro.
-        - Maior tamanho das bolhas indica maior peso das tarifas nos gastos totais, representando oportunidade de melhoria.
+        - Partidos pequenos têm proporcionalmente maior gasto com tarifas.
+        - As bolhas grandes estão concentradas em valores baixos de gasto total (próximo de zero):Isso significa que partidos com pouco orçamento acabam pagando tarifas bancárias altas em proporção.
+        - Partidos grandes são muito mais eficientes (<1%).
         """)
 
     st.markdown("***Gráfico 4: Análise de Dispersão - Eficiência Financeira***")
@@ -851,7 +849,7 @@ def main():
         # No lugar dos insights atuais do ranking, use:
         st.markdown("**Insights:**")
         st.markdown("""    
-        - **Top eficientes:** PMB, PSD e DEM — apresentam a menor incidência de tarifas.
+        - **Top eficientes:** AVANTE, PROS e PODE — apresentam a menor incidência de tarifas.
         - **Referência setorial:** serve como benchmark para outras legendas buscarem eficiência.
         - **Meta ideal:** percentual abaixo de 2% é considerado excelente, e todos estão bem abaixo disso, o que demonstra bom desempenho geral.
         - **Oportunidade:** partidos acima de 0,03% podem revisar práticas bancárias para reduzir custos.
